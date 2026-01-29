@@ -148,7 +148,7 @@ def torque_from_step_torques(x, step_torques):
     return T
 
 
-x = np.linspace(0, L, 2001)
+x = np.linspace(0, L, 3500)
 
 Vy = shear_from_point_loads(x, pl_y)
 My = moment_from_point_loads(x, pl_y)
