@@ -49,15 +49,11 @@ def von_mises_stress(d, V, M, T, Kt, Kts):
     sigma_vm = np.sqrt(sigma_b**2 + 3 * tau_combined**2)
     return sigma_vm
 
-def fos_calculation(V, M ,T, Sy, Kt, Kts , target_fos , d):
+def fos_calculation(V, M ,T, Sy, Kt, Kts ,d):
         sigma_vm = von_mises_stress(d, V, M, T, Kt, Kts)
         return Sy / sigma_vm 
 
 def solve_required_diameter(V, M, T, Sy, Kt, Kts, target_fos):
-    """
-    Solve for d such that FoS = target_fos.
-    """
-
 
     # diamater will prolly be between these bounds
     d_low = 0.1
@@ -65,9 +61,14 @@ def solve_required_diameter(V, M, T, Sy, Kt, Kts, target_fos):
 
     for _ in range(100):
         d_mid = 0.5 * (d_low + d_high)
+        fos = fos_calculation(V, M, T, Sy,  Kt, Kts, d_mid)
+
+        # Runs until fos is withing a certain tolerance or 100 iterations
+        if abs(fos - target_fos) < 1e-5:
+            break
 
         # binary search for the fos
-        if fos_calculation(V, M, T, Sy,  Kt, Kts, target_fos , d_mid) > target_fos:
+        if  fos > target_fos:
             d_high = d_mid
         else:
             d_low = d_mid
@@ -80,53 +81,57 @@ def main():
     table = [
         {"Location": "Output Spline 1 Shoulder (spline side)", "V": 97, "M": 170, "T": 462.5},
         {"Location": "Bearing 1 Shoulder (bearing side)", "V": 176, "M": 203, "T": 462.5},
-        {"Location": "Gear Shoulder (gear side)", "V": 176, "M": 1254, "T": "-462 / 0 / 462 / 925"},
+        {"Location": "Gear Shoulder (gear side)", "V": 176, "M": 1254, "T": 925}, #Jordan said to use 900 here but we should check that
         {"Location": "Keyway", "V": "176/602", "M": 1363, "T": -462.5},
         {"Location": "Snap Ring for Gear", "V": 602, "M": 995, "T": -462.5},
         {"Location": "Bearing 2 Shoulder (bearing side)", "V": 602, "M": 300, "T": -462.5},
         {"Location": "Input Spline 2 Shoulder (spline side)", "V": 97, "M": 170, "T": -462.5},
     ]
     
-    target_fos = 3.0   # <-- SET REQUIRED DESIGN FACTOR HERE
+    target_fos_list = [3.0 , 2.0]   # <-- SET REQUIRED DESIGN FACTOR HERE
 
-    mat = Material("Steel", Sy_psi=60000) # < --- SET MATERIAL HERE
+    materials = [Material("Steel", Sy_psi=60000) , Material("Alluminium" , Sy_psi = 9000)] # < --- SET MATERIAL HERE
 
     Kt = 2.3
     Kts = 3.0
 
-    print(f"\nTarget FoS = {target_fos}")
-    print(f"Material Sy = {mat.Sy_psi} psi\n")
-
-    worst_d = 0
-    worst_loc = None
-    d = []
-    for row in table:
-
-        # DO NOT WORRY ABOUT THIS IT JUST TAKES THE V, M, and T FROM EACH ROW OF THE DICTIONARY
-        V = worst_case_value(row["V"])
-        M = worst_case_value(row["M"])
-        T = worst_case_value(row["T"])
-
-
-        #finds the correct diamater for each of the shaft segments
-        d_req = solve_required_diameter(V, M, T, mat.Sy_psi, Kt, Kts , target_fos)
-
-        #finds the fos with the chosen diameter SIMPLY TO DOUBLE CHECK
-        fos = fos_calculation(V, M, T, mat.Sy_psi, Kt, Kts , target_fos , d_req)
-
-        print(f"{row['Location']}")
-        print(f"  Required diameter = {d_req:.4f} in")
-        print(f"  FOS = {fos:.4f} in\n")
-
-        if d_req > worst_d:
-            worst_d = d_req
-            worst_loc = row["Location"]
-
-    print(f"Worst-case location: {worst_loc}")
-    print(f"Governing diameter required: {worst_d:.4f} in\n")
 
 
 
+    for target_fos in target_fos_list:
+        for material in materials:
+
+            Sy = material.Sy_psi
+            print(f"\nTarget FoS = {target_fos}")
+            print(f"Material Sy = {Sy} psi\n")
+            
+            worst_d = 0
+            worst_loc = None
+
+            for row in table:
+
+                # DO NOT WORRY ABOUT THIS IT JUST TAKES THE V, M, and T FROM EACH ROW OF THE DICTIONARY
+                V = worst_case_value(row["V"])
+                M = worst_case_value(row["M"])
+                T = worst_case_value(row["T"])
+
+                #finds the correct diamater for each of the shaft segments
+                d_req = solve_required_diameter(V, M, T, Sy, Kt, Kts , target_fos)
+
+                #finds the fos with the chosen diameter SIMPLY TO DOUBLE CHECK
+                fos = fos_calculation(V, M, T, Sy, Kt, Kts , d_req)
+
+                print(f"{row['Location']}")
+                print(f"  Required diameter = {d_req:.4f} in")
+                print(f"  FOS = {fos:.4f} in\n")
+
+                if d_req > worst_d:
+                    worst_d = d_req
+                    worst_loc = row["Location"]
+
+            print(f"Worst-case location: {worst_loc}")
+            print(f"Governing diameter required: {worst_d:.4f} in\n")
+            print(f"------------------------------------------------------------------ \n")
 
 if __name__ == "__main__":
     main()
