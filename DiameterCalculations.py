@@ -49,15 +49,15 @@ def von_mises_stress(d, V, M, T, Kt, Kts):
     sigma_vm = np.sqrt(sigma_b**2 + 3 * tau_combined**2)
     return sigma_vm
 
+def fos_calculation(V, M ,T, Sy, Kt, Kts , target_fos , d):
+        sigma_vm = von_mises_stress(d, V, M, T, Kt, Kts)
+        return Sy / sigma_vm 
 
-def solve_required_diameter(V, M, T, Sy, Kt, Kts  , target_fos):
+def solve_required_diameter(V, M, T, Sy, Kt, Kts, target_fos):
     """
     Solve for d such that FoS = target_fos.
     """
 
-    def fos_objective(d):
-        sigma_vm = von_mises_stress(d, V, M, T, Kt, Kts)
-        return Sy / sigma_vm - target_fos
 
     # diamater will prolly be between these bounds
     d_low = 0.1
@@ -67,7 +67,7 @@ def solve_required_diameter(V, M, T, Sy, Kt, Kts  , target_fos):
         d_mid = 0.5 * (d_low + d_high)
 
         # binary search for the fos
-        if fos_objective(d_mid) > 0:
+        if fos_calculation(V, M, T, Sy,  Kt, Kts, target_fos , d_mid) > target_fos:
             d_high = d_mid
         else:
             d_low = d_mid
@@ -99,7 +99,7 @@ def main():
 
     worst_d = 0
     worst_loc = None
-
+    d = []
     for row in table:
 
         # DO NOT WORRY ABOUT THIS IT JUST TAKES THE V, M, and T FROM EACH ROW OF THE DICTIONARY
@@ -111,8 +111,12 @@ def main():
         #finds the correct diamater for each of the shaft segments
         d_req = solve_required_diameter(V, M, T, mat.Sy_psi, Kt, Kts , target_fos)
 
+        #finds the fos with the chosen diameter SIMPLY TO DOUBLE CHECK
+        fos = fos_calculation(V, M, T, mat.Sy_psi, Kt, Kts , target_fos , d_req)
+
         print(f"{row['Location']}")
-        print(f"  Required diameter = {d_req:.4f} in\n")
+        print(f"  Required diameter = {d_req:.4f} in")
+        print(f"  FOS = {fos:.4f} in\n")
 
         if d_req > worst_d:
             worst_d = d_req
@@ -120,6 +124,8 @@ def main():
 
     print(f"Worst-case location: {worst_loc}")
     print(f"Governing diameter required: {worst_d:.4f} in\n")
+
+
 
 
 if __name__ == "__main__":
