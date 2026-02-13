@@ -169,7 +169,6 @@ def build_segments():
 
     }
 
-
 def optimize_radii(Sy, target_fos,
                     r_min=0.02,
                     r_max=0.10,
@@ -226,11 +225,9 @@ def optimize_radii(Sy, target_fos,
 
             segments[name].r_ratio = local_best_r
 
-
         if not radii_changed:
 
             break
-
 
     segments = solve_shaft_discrete(segments, Sy, target_fos)
 
@@ -258,18 +255,6 @@ def main():
 
             segments = solve_shaft_discrete(segments, Sy, target_fos, TOL, MAX_ITER)
 
-            gear_d = segments["Gear Shoulder"].d
-            T_key = segments["Gear Shoulder"].T
-
-            snapRing = segments["Snap Ring"]
-
-            snapRing.d = snapRingCalculation.solve_required_diameter(
-                snapRing.V, snapRing.M, snapRing.T,
-                Sy, snapRing.Kt, snapRing.Kts,
-                target_fos, gear_d
-            )
-
-
             shaft_fos_values = []
             for seg in segments.values():
                 seg.fos = DiameterCalculations.fos_calculation(
@@ -278,16 +263,23 @@ def main():
                 )
                 shaft_fos_values.append(seg.fos)
 
-            snapRing.fos = snapRingCalculation.fos_calculation(
-                    snapRing.V,
-                    snapRing.M,
-                    snapRing.T,
-                    Sy,
-                    snapRing.Kt,
-                    snapRing.Kts,
-                    snapRing.d,
-                    gear_d
-                )
+            gear_d = segments["Gear Shoulder"].d
+            T_key = segments["Gear Shoulder"].T
+
+            
+            
+            snapRing = segments["Snap Ring"]
+
+            snapRing.d, snapRing.fos = snapRingCalculation.solve_discrete_snap_ring(
+                snapRing.V,
+                snapRing.M,
+                snapRing.T,
+                Sy,
+                snapRing.Kt,
+                snapRing.Kts,
+                target_fos,
+                gear_d
+            )
             
             shaft_fos_values.append(snapRing.fos)
 
@@ -347,12 +339,13 @@ def main():
             print("SNAP RING RESULTS")
             print("="*100)
 
-            print(f"Snap Ring Diameter:  {snapRing.d:.4f} in")
+            print(f"Snap Ring Outer Diameter:  {snapRing.d:.4f} in")
+            print(f"Snap Ring Inner Diameter:  {gear_d:.4f} in")
             print(f"Snap Ring Kt:        {snapRing.Kt:.4f}")
             print(f"Snap Ring Kts:       {snapRing.Kts:.4f}")
             print(f"Snap Ring True FoS:  {snapRing.fos:.4f}")
 
-            print("\nMinimum Governing FoS (Including Snap Ring): "
+            print("\nMinimum Governing FoS: "
                 f"{min_shaft_fos:.4f}")
 
             print("\n" + "="*100)

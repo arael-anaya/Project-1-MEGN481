@@ -11,6 +11,7 @@ Units:
 from dataclasses import dataclass
 from typing import Dict, Any, List
 import numpy as np
+import diameterSnap
 
 
 
@@ -62,4 +63,58 @@ def solve_required_diameter(V, M, T, Sy, Kt, Kts, target_fos , d_inner):
             d_low = d_mid
 
     return d_mid
+
+def solve_discrete_snap_ring(
+    V,
+    M,
+    T,
+    Sy,
+    Kt,
+    Kts,
+    target_fos,
+    inner_diameter,
+    tol=1e-7,
+    max_iter=50
+):
+    """
+    Solves required snap ring outer diameter,
+    snaps to catalog size,
+    and guarantees FoS >= target_fos.
+    """
+
+    # --- 1) Continuous solve ---
+    d_required = solve_required_diameter(
+        V, M, T,
+        Sy, Kt, Kts,
+        target_fos,
+        inner_diameter
+    )
+
+    # --- 2) Snap to catalog OD ---
+    d_snapped = diameterSnap.snap_diameter(d_required, "snapRing")
+
+    # --- 3) Recalculate FoS ---
+    fos = fos_calculation(
+        V, M, T,
+        Sy, Kt, Kts,
+        d_snapped,
+        inner_diameter
+    )
+
+    # --- 4) If FoS too low, step up catalog sizes ---
+    while fos < target_fos:
+
+        # bump slightly to force next catalog size
+        d_snapped += 1e-6
+        d_snapped = diameterSnap.snap_diameter(d_snapped, "snapRing")
+
+        fos = fos_calculation(
+            V, M, T,
+            Sy, Kt, Kts,
+            d_snapped,
+            inner_diameter
+        )
+
+    return d_snapped, fos
+
 
