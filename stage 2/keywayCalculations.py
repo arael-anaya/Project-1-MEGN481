@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # INPUTS (edit these)
     # -------------------------
     T = 925        # torque (lb-in)
-    d = 2.5        # shaft diameter (in)
+    d = 2.5        # gear diameter (in)
     w = 1/8         # key width (in)
     H = 1/8         # key height (in)
     L = 1.25          # key length (in)
