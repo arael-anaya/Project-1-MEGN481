@@ -40,7 +40,7 @@ def main():
     target_fos_list = [2.0]   # <-- SET REQUIRED DESIGN FACTOR HERE
 
     materials = [ Material("4140 Steel" , Sy_psi = 60200)] # < --- SET MATERIAL HERE
-#cut this part out for now type shii: Material("1020 Steel", Sy_psi=413000) ,
+#cut this part out for now type shii: Material("1020 Steel", Sy_psi=41300) ,
 
 
 

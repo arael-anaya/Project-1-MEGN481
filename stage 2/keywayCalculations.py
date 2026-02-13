@@ -70,5 +70,44 @@ def optimize_key_height(T, d, L, w, Sy, target_fos):
 
     return H_mid
 
+if __name__ == "__main__":
+
+    # -------------------------
+    # INPUTS (edit these)
+    # -------------------------
+    T = 925        # torque (lb-in)
+    d = 2.5        # shaft diameter (in)
+    w = 1/8         # key width (in)
+    H = 1/8         # key height (in)
+    L = 1.25          # key length (in)
+
+    Sy = 41300       # yield strength of key material (psi)
+    target_fos = 2.0
+
+    # -------------------------
+    # CHECK FoS for chosen key
+    # -------------------------
+    sigma_vm = key_von_mises(T, d, L, w, H)
+    fos_current = Sy / sigma_vm
+
+    print("----- CURRENT KEY -----")
+    print(f"Von Mises stress = {sigma_vm:.2f} psi")
+    print(f"FoS = {fos_current:.3f}\n")
+
+    # -------------------------
+    # Solve for required length
+    # -------------------------
+    L_required = optimize_key_length(T, d, w, H, Sy, target_fos)
+
+    print("----- REQUIRED LENGTH -----")
+    print(f"L required for FoS={target_fos} → {L_required:.3f} in\n")
+
+    # -------------------------
+    # Solve for required height
+    # -------------------------
+    H_required = optimize_key_height(T, d, L, w, Sy, target_fos)
+
+    print("----- REQUIRED HEIGHT -----")
+    print(f"H required for FoS={target_fos} → {H_required:.3f} in")
 
 
