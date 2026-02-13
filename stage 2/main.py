@@ -1,9 +1,11 @@
 import DiameterCalculations
 import keywayCalculations
+import StressConcentration
 
 from dataclasses import dataclass
 from typing import Dict, Any, List
 import numpy as np
+
 
 @dataclass
 class Material:
@@ -65,14 +67,11 @@ def main():
                 if row["Location"] == "Keyway":
                     # you need a shaft diameter first
                     d_key = 1.125  # or whatever you computed
-
                     L = 1.5        # assumed key length
                     w = 0.25       # key width
-
                     H_required = keywayCalculations.optimize_key_height(
                         T, d_key, L, w, Sy, target_fos
                     )
-
                     print(f"{row['Location']}")
                     print(f"  Required Height = {H_required:.4f} in\n")
 
@@ -80,6 +79,8 @@ def main():
 
                 #finds the correct diamater for each of the shaft segments
                 d_req = DiameterCalculations.solve_required_diameter(V, M, T, Sy, Kt, Kts , target_fos)
+
+                
 
                 # finds the fos with the chosen diameter SIMPLY TO DOUBLE CHECK
                 # fos = DiameterCalculations.fos_calculation(V, M, T, Sy, Kt, Kts , d_req)
