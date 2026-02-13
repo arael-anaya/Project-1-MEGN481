@@ -70,7 +70,9 @@ def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-4, max_iter=50):
 def main():
 
     segments = {
-    "Center Section": Segment("Center Section", 176, 1254, 925),
+    "Center Section": Segment(
+        "Center Section", 
+        176, 1254, 426.5),
 
     "Bearing 1 Shoulder": Segment(
         "Bearing 1 Shoulder",
