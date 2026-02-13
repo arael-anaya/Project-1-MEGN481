@@ -40,7 +40,6 @@ def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-7, max_iter=50000)
 
         max_change = 0
 
-
         for seg in segments.values():
 
             d_old = seg.d
@@ -91,7 +90,7 @@ def main():
         "Center Section", 
         176, 1254, 426.5),
 
-     "Gear Shoulder": Segment(
+    "Gear Shoulder": Segment(
         "Gear Shoulder",
         176, 1254, 925,
         link="Center Section"
@@ -122,7 +121,6 @@ def main():
             Sy = material.Sy_psi
             print(f"\nTarget FoS = {target_fos}")
             print(f"{material.name} Sy = {Sy} psi\n")
-
 
             # Iterte through r = .02 to r = .1
             r = 0.05 #a secret * diameter that I added in #Step 2 — update stress concentrations
