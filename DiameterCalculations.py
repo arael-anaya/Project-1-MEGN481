@@ -55,6 +55,7 @@ def solve_required_diameter(V, M, T, Sy, Kt, Kts, target_fos):
     # diamater will prolly be between these bounds
     d_low = 0.1
     d_high = 5.0
+    d_mid = 0
 
     for _ in range(100):
         d_mid = 0.5 * (d_low + d_high)
@@ -78,9 +79,13 @@ def main():
     table = [
         {"Location": "Output Spline 1 Shoulder (spline side)", "V": 97, "M": 170, "T": 462.5 , "Kt" : 1.0 , "Kts" : 1.0},
         {"Location": "Bearing 1 Shoulder (bearing side)", "V": 176, "M": 203, "T": 462.5 , "Kt" : 1.0 , "Kts" : 1.0},
-        {"Location": "Gear Shoulder (gear side)", "V": 176, "M": 1254, "T": 925, "Kt" : 1.0 , "Kts" : 1.0}, #Jordan said to use 900 here but we should check that
-        {"Location": "Keyway", "V": "176/602", "M": 1363, "T": -462.5 , "Kt" : 2.3 , "Kts": 3.0 }, #Jordan said to use 
+        {"Location": "Gear Shoulder (gear side)", "V": 176, "M": 1254, "T": 925, "Kt" : 1.0 , "Kts" : 1.0}, #Jordan said to use 925 here but we should check that
+
+        # Ignore Keyway and Snap Ring "diameter calculations for now"
+        {"Location": "Keyway", "V": 602, "M": 1363, "T": -462.5 , "Kt" : 2.3 , "Kts": 3.0 }, #Jordan said to use 602
         {"Location": "Snap Ring for Gear", "V": 602, "M": 995, "T": -462.5 , "Kt" : 3.0 , "Kts" : 5.0},
+
+
         {"Location": "Bearing 2 Shoulder (bearing side)", "V": 602, "M": 300, "T": -462.5 , "Kt" : 1.0 , "Kts" : 1.0},
         {"Location": "Input Spline 2 Shoulder (spline side)", "V": 97, "M": 170, "T": -462.5 , "Kt" : 1.0 , "Kts" : 1.0},
     ]
@@ -98,7 +103,7 @@ def main():
 
             Sy = material.Sy_psi
             print(f"\nTarget FoS = {target_fos}")
-            print(f"Material Sy = {Sy} psi\n")
+            print(f"{material.name} Sy = {Sy} psi\n")
             
             worst_d = 0
             worst_loc = None
@@ -119,8 +124,8 @@ def main():
                 fos = fos_calculation(V, M, T, Sy, Kt, Kts , d_req)
 
                 print(f"{row['Location']}")
-                print(f"  Required diameter = {d_req:.4f} in")
-                print(f"  FOS = {fos:.4f} in\n")
+                print(f"  Required diameter = {d_req:.4f} in\n")
+
 
                 if d_req > worst_d:
                     worst_d = d_req
