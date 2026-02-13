@@ -24,11 +24,13 @@ def main():
     table = [
         {"Location": "Output Spline 1 Shoulder (spline side)", "V": 97, "M": 170, "T": 462.5 , "Kt" : 1.0 , "Kts" : 1.0},
         {"Location": "Bearing 1 Shoulder (bearing side)", "V": 176, "M": 203, "T": 462.5 , "Kt" : 1.0 , "Kts" : 1.0},
+        {"Location": "Center Section ", "V": 176, "M": 1254, "T": 925, "Kt" : 1.0 , "Kts" : 1.0},
         {"Location": "Gear Shoulder (gear side)", "V": 176, "M": 1254, "T": 925, "Kt" : 1.0 , "Kts" : 1.0}, #Jordan said to use 925 here but we should check that
+        
 
         # Ignore Keyway and Snap Ring "diameter calculations for now"
-        {"Location": "Keyway", "V": 602, "M": 1363, "T": -462.5 , "Kt" : 2.3 , "Kts": 3.0 }, #Jordan said to use 602 for shear cause its max
-        {"Location": "Snap Ring for Gear", "V": 602, "M": 995, "T": -462.5 , "Kt" : 3.0 , "Kts" : 5.0},
+        #{"Location": "Keyway", "V": 602, "M": 1363, "T": -462.5 , "Kt" : 2.3 , "Kts": 3.0 }, #Jordan said to use 602 for shear cause its max
+        #{"Location": "Snap Ring for Gear", "V": 602, "M": 995, "T": -462.5 , "Kt" : 3.0 , "Kts" : 5.0},
 
 
         {"Location": "Bearing 2 Shoulder (bearing side)", "V": 602, "M": 300, "T": -462.5 , "Kt" :2.066 , "Kts" : 1.732},
@@ -37,8 +39,8 @@ def main():
     
     target_fos_list = [2.0]   # <-- SET REQUIRED DESIGN FACTOR HERE
 
-    materials = [Material("1020 Steel", Sy_psi=30000) , Material("4140 Steel" , Sy_psi = 60200)] # < --- SET MATERIAL HERE
-
+    materials = [ Material("4140 Steel" , Sy_psi = 60200)] # < --- SET MATERIAL HERE
+#cut this part out for now type shii: Material("1020 Steel", Sy_psi=413000) ,
 
 
 
@@ -99,3 +101,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

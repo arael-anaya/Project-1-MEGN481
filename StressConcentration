@@ -51,8 +51,8 @@ def stress_concentration(D, d, r, mode="torsion"):
     return K
 
 # -------- Example --------
-D = 1.25
-d = 0.75
+D = 0.75
+d = 5/8
 r = 0.05 * d  # choose r = 0.05d
 
 Kt = stress_concentration(D, d, r, mode="bending")
