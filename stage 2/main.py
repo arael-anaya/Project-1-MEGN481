@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 import numpy as np
 
 
-STANDARD_DIAMETERS = STANDARD_DIAMETERS = [
+STANDARD_DIAMETERS = [
     0.25,   # 1/4"
     0.375,  # 3/8"
     0.5,    # 1/2"
@@ -177,40 +177,69 @@ def main():
             print(f"\nTarget FoS = {target_fos}")
             print(f"{material.name} Sy = {Sy} psi\n")
 
-            # ---------- 1) optimize r_ratio per linked segment ----------
-            base_segments = build_segments()
-            best_r_ratios = {}
+            r_min = 0.02
+            r_max = 0.10
+            r_steps = 9
+            r_values = np.linspace(r_min, r_max, r_steps)
 
-            for name, seg in base_segments.items():
-                if not seg.link:
-                    continue
+            # ---------- optimize ALL radii with coordinate descent ----------
 
-                print(f"\nOptimizing radius for {name}")
-
-                local_best_r = None
-                local_best_metric = 1e9
-
-                for r_trial in r_values:
-                    segments = build_segments()
-                    segments[name].r_ratio = r_trial
-
-
-                    segments = solve_shaft_discrete(segments, Sy, target_fos)
-
-
-                    total_d = sum(s.d for s in segments.values())
-
-                    if total_d < local_best_metric:
-                        local_best_metric = total_d
-                        local_best_r = r_trial
-
-                best_r_ratios[name] = local_best_r
-                print(f"  Best r_ratio for {name} = {local_best_r:.3f}")
-
-            # ---------- 2) final solve with ALL optimized radii ----------
             segments = build_segments()
-            for name, r_opt in best_r_ratios.items():
-                segments[name].r_ratio = r_opt
+
+            # initialize all radii
+            for seg in segments.values():
+                seg.r_ratio = 0.05
+
+            linked_names = [name for name, seg in segments.items() if seg.link]
+
+            for outer_iter in range(5):
+                print(f"\n=== Radius Optimization Pass {outer_iter+1} ===")
+
+                radii_changed = False
+
+                for name in linked_names:
+                    print(f"Optimizing radius for {name}")
+
+                    local_best_r = segments[name].r_ratio
+                    local_best_metric = 1e9
+
+                    for r_trial in r_values:
+
+                        # trial = same current radii, except this one
+                        trial_segments = build_segments()
+                        for n in linked_names:
+                            trial_segments[n].r_ratio = segments[n].r_ratio
+                        trial_segments[name].r_ratio = r_trial
+
+                        trial_segments = solve_shaft_discrete(trial_segments, Sy, target_fos)
+
+                        total_d = sum(s.d for s in trial_segments.values())
+                        if total_d < local_best_metric:
+                            local_best_metric = total_d
+                            local_best_r = r_trial
+
+                    if abs(segments[name].r_ratio - local_best_r) > 1e-6:
+                        radii_changed = True
+
+                    segments[name].r_ratio = local_best_r
+                    print(f"  Best r_ratio = {local_best_r:.3f}")
+
+                if not radii_changed:
+                    print("Radii converged.")
+                    break
+
+            # Final solve with the converged radii stored in `segments`
+            segments = solve_shaft_discrete(segments, Sy, target_fos)
+
+            # Optional: print the actual radii (in inches) at each shoulder
+            print("\n--- OPTIMIZED FILLET RADII ---")
+            for name in linked_names:
+                linked = segments[segments[name].link]
+                d_small = min(segments[name].d, linked.d)
+                r_actual = segments[name].r_ratio * d_small
+                print(f"{name} -> {segments[name].link}: r_ratio={segments[name].r_ratio:.3f}, r={r_actual:.4f} in")
+
+
 
             segments = solve_shaft_discrete(segments, Sy, target_fos)
 
