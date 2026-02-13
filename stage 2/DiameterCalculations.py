@@ -1,17 +1,7 @@
-"""
-Solve for required shaft diameter to meet target FoS.
-
-Units:
-- Sy in psi
-- M, T in in-lbf
-- V in lbf
-- d in inches
-"""
-
 from dataclasses import dataclass
 from typing import Dict, Any, List
 import numpy as np
-import keywayCalculations
+
 
 
 def von_mises_stress(d, V, M, T, Kt, Kts):
