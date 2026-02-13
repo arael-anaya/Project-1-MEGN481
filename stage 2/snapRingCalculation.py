@@ -27,7 +27,7 @@ def von_mises_stress(d_out, d_in, V, M, T, Kt, Kts):
     sigma_b = Kt * (c * M / I)
     tau_t = Kts * (c * T / J)
 
-    tau_v = 16 * V / (3 * pi * (d_out**4 - d_in**4))
+    tau_v = 16 * V / (3 * pi * (d_out**2 - d_in**2))
 
     tau_combined = tau_t+tau_v
 

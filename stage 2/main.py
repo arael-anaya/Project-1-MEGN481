@@ -251,7 +251,7 @@ def main():
             Sy = material.Sy_psi
 
             segments = build_segments()
-            # segments = optimize_radii(Sy, target_fos , r_min, r_max , r_steps, MAX_ITER)
+            segments = optimize_radii(Sy, target_fos , r_min, r_max , r_steps, MAX_ITER)
 
             segments = solve_shaft_discrete(segments, Sy, target_fos, TOL, MAX_ITER)
 
