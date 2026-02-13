@@ -9,7 +9,8 @@ from typing import Dict, Any, List
 import numpy as np
 import copy
 
-
+MAX_ITER = 20
+TOL = 1e-7
 
 
 
@@ -21,6 +22,7 @@ class Segment:
     T: float
     link: str = ""
     r_ratio: float = 0.05
+    fos: float = 0.0
 
     d: float = 1.0
     Kt: float = 1.0
@@ -113,7 +115,8 @@ def solve_shaft_discrete(segments, Sy, target_fos,
             segments,
             Sy,
             target_fos,
-            tol=tol
+            tol,
+            max_outer_iter
         )
 
 
@@ -222,13 +225,13 @@ def optimize_radii(Sy, target_fos,
                 radii_changed = True
 
             segments[name].r_ratio = local_best_r
-            # print(f"  Best r_ratio = {local_best_r:.3f}")
+
 
         if not radii_changed:
-            # print("Radii converged.")
+
             break
 
-    # Final solve with converged radii
+
     segments = solve_shaft_discrete(segments, Sy, target_fos)
 
     return segments
@@ -238,7 +241,7 @@ def main():
     r_min = 0.02
     r_max = 0.10
     r_steps = 9
-    r_values = np.linspace(r_min, r_max, r_steps)
+
 
     target_fos_list = [2.0]
     materials = [Material("4140 Steel", Sy_psi=60200)]
@@ -249,47 +252,50 @@ def main():
         for material in materials:
 
             Sy = material.Sy_psi
-            print(f"\nTarget FoS = {target_fos}")
-            print(f"{material.name} Sy = {Sy} psi\n")
 
             segments = build_segments()
-            # segments = optimize_radii(Sy, target_fos)
+            # segments = optimize_radii(Sy, target_fos , r_min, r_max , r_steps, MAX_ITER)
 
-            print("\n--- OPTIMAL GEOMETRIC RATIOS ---")
-            for seg in segments.values():
-                seg.print_geometry(segments)
-
-            # Final solve with the converged radii stored in `segments`
-            segments = solve_shaft_discrete(segments, Sy, target_fos)
-
-            # ---------- 3) shaft FoS reporting ----------
-            shaft_fos_values = []
-            for seg in segments.values():
-                fos_actual = DiameterCalculations.fos_calculation(
-                    seg.V, seg.M, seg.T,
-                    Sy, seg.Kt, seg.Kts, seg.d
-                )
-                shaft_fos_values.append(fos_actual)
-
-                print(f"{seg.name}")
-                print(f"  Diameter = {seg.d:.4f} in")
-                print(f"  Kt = {seg.Kt:.3f}")
-                print(f"  Kts = {seg.Kts:.3f}")
-                print(f"  Actual FoS = {fos_actual:.4f}\n")
-
-            min_shaft_fos = min(shaft_fos_values)
-
-            # ---------- 4) key design ----------
-            print("\n--- KEY DESIGN ---")
+            segments = solve_shaft_discrete(segments, Sy, target_fos, TOL, MAX_ITER)
 
             gear_d = segments["Gear Shoulder"].d
             T_key = segments["Gear Shoulder"].T
+
+            snapRing = segments["Snap Ring"]
+
+            snapRing.d = snapRingCalculation.solve_required_diameter(
+                snapRing.V, snapRing.M, snapRing.T,
+                Sy, snapRing.Kt, snapRing.Kts,
+                target_fos, gear_d
+            )
+
+
+            shaft_fos_values = []
+            for seg in segments.values():
+                seg.fos = DiameterCalculations.fos_calculation(
+                    seg.V, seg.M, seg.T,
+                    Sy, seg.Kt, seg.Kts, seg.d
+                )
+                shaft_fos_values.append(seg.fos)
+
+            snapRing.fos = snapRingCalculation.fos_calculation(
+                    snapRing.V,
+                    snapRing.M,
+                    snapRing.T,
+                    Sy,
+                    snapRing.Kt,
+                    snapRing.Kts,
+                    snapRing.d,
+                    gear_d
+                )
+            
+            shaft_fos_values.append(snapRing.fos)
+
+            min_shaft_fos = min(shaft_fos_values)
+
             Sy_key = key_materials[0].Sy_psi
             
-
             key_target_fos = min_shaft_fos - fos_key_diff
-            print(f"Target Key FOS = {key_target_fos:.4f}")
-
 
             bounds_L = (0.5, 1.25)
             bounds_w = (0.05, 0.5)
@@ -300,34 +306,69 @@ def main():
                 bounds_L, bounds_w, bounds_H
             )
 
-            print(f"Gear shaft diameter = {gear_d:.4f} in")
-            print("Optimized Key Geometry:")
-            print(f"  L = {L_opt:.4f} in")
-            print(f"  w = {w_opt:.4f} in")
-            print(f"  H = {H_opt:.4f} in")
-            print(f"Actual Key FOS = {key_true_fos:.4f}")
+            print("\n" + "="*100)
+            print("FINAL SHAFT DESIGN REPORT")
+            print("="*100)
 
-            print("\n--- Snap Ring DESIGN ---")
-            snapRing = segments["Snap Ring"]
-            snapRingTol = 1e-5
-            snaptRingIter = 100
+            print(f"\nMaterial: {material.name}")
+            print(f"Yield Strength (Sy): {Sy:.2f} psi")
+            print(f"Design  Factor:    {target_fos:.4f}")
+            print("-"*100)
 
-            snapRing.d = snapRingCalculation.solve_required_diameter(
-                snapRing.V, snapRing.M, snapRing.T,
-                Sy, snapRing.Kt, snapRing.Kts,
-                target_fos, gear_d
-            )
+            for seg in segments.values():
 
+                if seg.name == "Snap Ring":
+                    continue
 
-            print(f"  Diameter = {snapRing.d:.4f} in")
-            print(f"  Kt = {snapRing.Kt:.3f}")
-            print(f"  Kts = {snapRing.Kts:.3f}")
-            print(f"  Actual FoS = {snapRingCalculation.fos_calculation(snapRing.V, snapRing.M, snapRing.T, Sy, snapRing.Kt, snapRing.Kts, snapRing.d, gear_d):.4f}\n")
-            
+                print(f"\nSEGMENT: {seg.name}")
+                print("-"*80)
 
+                print(f"Diameter (d):        {seg.d:.4f} in")
+                print(f"Kt (bending):        {seg.Kt:.4f}")
+                print(f"Kts (torsion):       {seg.Kts:.4f}")
+                print(f"True FoS:            {seg.fos:.4f}")
 
+                if seg.link:
+                    linked = segments[seg.link]
 
+                    D = max(seg.d, linked.d)
+                    d_small = min(seg.d, linked.d)
+                    r = seg.r_ratio * d_small
 
+                    print(f"Fillet Radius (r):   {r:.4f} in")
+                    print(f"d/D:                 {(d_small / D):.4f}")
+                    print(f"r/D:                 {(r / D):.4f}")
+                else:
+                    print(f"Fillet Radius:       N/A")
+                    print(f"d/D:                 N/A")
+                    print(f"r/D:                 N/A")
+
+            print("\n" + "="*100)
+            print("SNAP RING RESULTS")
+            print("="*100)
+
+            print(f"Snap Ring Diameter:  {snapRing.d:.4f} in")
+            print(f"Snap Ring Kt:        {snapRing.Kt:.4f}")
+            print(f"Snap Ring Kts:       {snapRing.Kts:.4f}")
+            print(f"Snap Ring True FoS:  {snapRing.fos:.4f}")
+
+            print("\nMinimum Governing FoS (Including Snap Ring): "
+                f"{min_shaft_fos:.4f}")
+
+            print("\n" + "="*100)
+            print("KEY DESIGN RESULTS")
+            print("="*100)
+
+            print(f"Gear Shaft Diameter: {gear_d:.4f} in")
+            print(f"Target Key FoS:      {key_target_fos:.4f}")
+            print(f"Key Length (L):      {L_opt:.4f} in")
+            print(f"Key Width (w):       {w_opt:.4f} in")
+            print(f"Key Height (H):      {H_opt:.4f} in")
+            print(f"True Key FoS:        {key_true_fos:.4f}")
+
+            print("\n" + "="*100)
+            print("END OF REPORT")
+            print("="*100 + "\n")
 
 
 if __name__ == "__main__":
