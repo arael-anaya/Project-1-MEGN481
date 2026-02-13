@@ -1,10 +1,9 @@
 import numpy as np
-
+from scipy.optimize import minimize
 
 def key_force_from_torque(T, d):
     r = d / 2
     return T / r
-
 
 def key_von_mises(T, d, L, w, H):
 
@@ -22,92 +21,33 @@ def key_von_mises(T, d, L, w, H):
 
     return max(sigma_vm_shear, sigma_vm_bearing)
 
+def optimize_key_geometry(T, d, Sy, target_fos,
+                            bounds_L, bounds_w, bounds_H):
 
-def optimize_key_length(T, d, w, h, Sy, target_fos):
-    """
-    Solve for minimum key length L to meet target FoS.
-    """
+    def objective(x):
+        L, w, H = x
+        return L * w * H   # minimize volume
 
-    def fos(L):
-        sigma_vm = key_von_mises(T, d, L, w, h)
-        return Sy / sigma_vm
-
-    L_low = 0.01
-    L_high = 5.0
-    L_mid = 0
-
-    for _ in range(100):
-        L_mid = 0.5 * (L_low + L_high)
-        if fos(L_mid) > target_fos:
-            L_high = L_mid
-        else:
-            L_low = L_mid
-
-    return L_mid
-
-
-
-def optimize_key_height(T, d, L, w, Sy, target_fos):
-    """
-    Solve for minimum key height H to meet target FoS.
-    """
-
-    def fos(H):
+    def fos_constraint(x):
+        L, w, H = x
         sigma_vm = key_von_mises(T, d, L, w, H)
-        return Sy / sigma_vm
+        fos = Sy / sigma_vm
+        return fos - target_fos
 
-    H_low = 0.01
-    H_high = 2.0
-    H_mid = 0.0
+    constraints = [
+        {'type': 'ineq', 'fun': fos_constraint}
+    ]
 
-    for _ in range(100):
-        H_mid = 0.5 * (H_low + H_high)
+    bounds = [bounds_L, bounds_w, bounds_H]
 
-        if fos(H_mid) > target_fos:
-            H_high = H_mid
-        else:
-            H_low = H_mid
+    x0 = [
+        np.mean(bounds_L),
+        np.mean(bounds_w),
+        np.mean(bounds_H)
+    ]
 
-    return H_mid
+    result = minimize(objective, x0,
+                        bounds=bounds,
+                        constraints=constraints)
 
-if __name__ == "__main__":
-
-    # -------------------------
-    # INPUTS (edit these)
-    # -------------------------
-    T = 925        # torque (lb-in)
-    d = 2.5        # gear diameter (in)
-    w = 1/8         # key width (in)
-    H = 1/8         # key height (in)
-    L = 1.25          # key length (in)
-
-    Sy = 41300       # yield strength of key material (psi)
-    target_fos = 2.0
-
-    # -------------------------
-    # CHECK FoS for chosen key
-    # -------------------------
-    sigma_vm = key_von_mises(T, d, L, w, H)
-    fos_current = Sy / sigma_vm
-
-    print("----- CURRENT KEY -----")
-    print(f"Von Mises stress = {sigma_vm:.2f} psi")
-    print(f"FoS = {fos_current:.3f}\n")
-
-    # -------------------------
-    # Solve for required length
-    # -------------------------
-    L_required = optimize_key_length(T, d, w, H, Sy, target_fos)
-
-    print("----- REQUIRED LENGTH -----")
-    print(f"L required for FoS={target_fos} → {L_required:.3f} in\n")
-
-    # -------------------------
-    # Solve for required height
-    # -------------------------
-    H_required = optimize_key_height(T, d, L, w, Sy, target_fos)
-
-    print("----- REQUIRED HEIGHT -----")
-    print(f"H required for FoS={target_fos} → {H_required:.3f} in")
-
-
+    return result.x, result
