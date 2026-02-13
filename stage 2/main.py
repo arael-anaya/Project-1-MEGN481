@@ -40,6 +40,34 @@ class Segment:
         self.Kt = StressConcentration.stress_concentration(D, d, r, "bending")
         self.Kts = StressConcentration.stress_concentration(D, d, r, "torsion")
 
+    def print_geometry(self, segments):
+        """
+        Print geometric ratios for this segment's shoulder transition.
+        Requires full segments dict to access linked segment.
+        """
+
+        if not self.link:
+            return
+
+        linked = segments[self.link]
+
+        D = max(self.d, linked.d)
+        d = min(self.d, linked.d)
+
+        r = self.r_ratio * d
+
+        d_over_D = d / D
+        r_over_d = r / d
+
+        print(f"{self.name} -> {self.link}")
+        print(f"  D = {D:.4f} in")
+        print(f"  d = {d:.4f} in")
+        print(f"  r = {r:.4f} in")
+        print(f"  d/D = {d_over_D:.4f}") 
+        print(f"  r/d = {r_over_d:.4f}\n")
+
+        
+
 
 @dataclass
 class Material:
@@ -157,6 +185,75 @@ def build_segments():
     }
 
 
+def optimize_radii(Sy, target_fos,
+                    r_min=0.02,
+                    r_max=0.10,
+                    r_steps=9,
+                    max_passes=5,
+                    initial_r=0.05):
+    """
+    Coordinate-descent optimization of fillet radii.
+    Returns optimized segments dictionary.
+    """
+
+    r_values = np.linspace(r_min, r_max, r_steps)
+
+    segments = build_segments()
+
+    # initialize radii
+    for seg in segments.values():
+        seg.r_ratio = initial_r
+
+    linked_names = [name for name, seg in segments.items() if seg.link]
+
+    for outer_iter in range(max_passes):
+        # print(f"\n=== Radius Optimization Pass {outer_iter+1} ===")
+
+        radii_changed = False
+
+        for name in linked_names:
+            # print(f"Optimizing radius for {name}")
+
+            local_best_r = segments[name].r_ratio
+            local_best_metric = float("inf")
+
+            for r_trial in r_values:
+
+                trial_segments = build_segments()
+
+                # copy current radii
+                for n in linked_names:
+                    trial_segments[n].r_ratio = segments[n].r_ratio
+
+                # vary only this shoulder
+                trial_segments[name].r_ratio = r_trial
+
+                trial_segments = solve_shaft_discrete(
+                    trial_segments,
+                    Sy,
+                    target_fos
+                )
+
+                total_d = sum(s.d for s in trial_segments.values())
+
+                if total_d < local_best_metric:
+                    local_best_metric = total_d
+                    local_best_r = r_trial
+
+            if abs(segments[name].r_ratio - local_best_r) > 1e-6:
+                radii_changed = True
+
+            segments[name].r_ratio = local_best_r
+            # print(f"  Best r_ratio = {local_best_r:.3f}")
+
+        if not radii_changed:
+            print("Radii converged.")
+            break
+
+    # Final solve with converged radii
+    segments = solve_shaft_discrete(segments, Sy, target_fos)
+
+    return segments
 
 def main():
 
@@ -168,7 +265,7 @@ def main():
     target_fos_list = [2.0]
     materials = [Material("4140 Steel", Sy_psi=60200)]
     key_materials = [Material("FILL IN NAME", Sy_psi=41300)]
-    fos_key_diff = 0.5
+    fos_key_diff = 1.0
 
     for target_fos in target_fos_list:
         for material in materials:
@@ -177,72 +274,17 @@ def main():
             print(f"\nTarget FoS = {target_fos}")
             print(f"{material.name} Sy = {Sy} psi\n")
 
-            r_min = 0.02
-            r_max = 0.10
-            r_steps = 9
-            r_values = np.linspace(r_min, r_max, r_steps)
+            segments = optimize_radii(Sy, target_fos)
 
-            # ---------- optimize ALL radii with coordinate descent ----------
-
-            segments = build_segments()
-
-            # initialize all radii
+            print("\n--- OPTIMAL GEOMETRIC RATIOS ---")
             for seg in segments.values():
-                seg.r_ratio = 0.05
+                seg.print_geometry(segments)
 
-            linked_names = [name for name, seg in segments.items() if seg.link]
-
-            for outer_iter in range(5):
-                print(f"\n=== Radius Optimization Pass {outer_iter+1} ===")
-
-                radii_changed = False
-
-                for name in linked_names:
-                    print(f"Optimizing radius for {name}")
-
-                    local_best_r = segments[name].r_ratio
-                    local_best_metric = 1e9
-
-                    for r_trial in r_values:
-
-                        # trial = same current radii, except this one
-                        trial_segments = build_segments()
-                        for n in linked_names:
-                            trial_segments[n].r_ratio = segments[n].r_ratio
-                        trial_segments[name].r_ratio = r_trial
-
-                        trial_segments = solve_shaft_discrete(trial_segments, Sy, target_fos)
-
-                        total_d = sum(s.d for s in trial_segments.values())
-                        if total_d < local_best_metric:
-                            local_best_metric = total_d
-                            local_best_r = r_trial
-
-                    if abs(segments[name].r_ratio - local_best_r) > 1e-6:
-                        radii_changed = True
-
-                    segments[name].r_ratio = local_best_r
-                    print(f"  Best r_ratio = {local_best_r:.3f}")
-
-                if not radii_changed:
-                    print("Radii converged.")
-                    break
 
             # Final solve with the converged radii stored in `segments`
             segments = solve_shaft_discrete(segments, Sy, target_fos)
 
-            # Optional: print the actual radii (in inches) at each shoulder
-            print("\n--- OPTIMIZED FILLET RADII ---")
-            for name in linked_names:
-                linked = segments[segments[name].link]
-                d_small = min(segments[name].d, linked.d)
-                r_actual = segments[name].r_ratio * d_small
-                print(f"{name} -> {segments[name].link}: r_ratio={segments[name].r_ratio:.3f}, r={r_actual:.4f} in")
-
-
-
-            segments = solve_shaft_discrete(segments, Sy, target_fos)
-
+    
 
             # ---------- 3) shaft FoS reporting ----------
             shaft_fos_values = []
