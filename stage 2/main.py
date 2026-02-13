@@ -34,7 +34,7 @@ class Material:
     Sy_psi: float
 
 
-def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-4, max_iter=50):
+def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-7, max_iter=50000):
 
     for _ in range(max_iter):
 
@@ -57,6 +57,11 @@ def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-4, max_iter=50):
         for seg in segments.values():
             if seg.link:
                 seg.update_stress_concentration(segments[seg.link], r)
+                linked_seg = segments[seg.link]
+                d_small = min(seg.d, linked_seg.d)
+                seg.update_stress_concentration(linked_seg, r * d_small)
+
+                
 
         if max_change < tol:
             print("Converged.")
@@ -70,9 +75,11 @@ def solve_shaft_iterative(segments, Sy, target_fos, r, tol=1e-4, max_iter=50):
 def main():
 
     segments = {
-    "Center Section": Segment(
-        "Center Section", 
-        176, 1254, 426.5),
+    "Output Spline Shoulder": Segment(
+        "Output Spline Shoulder",
+        97, 170, 462.5,
+        link="Bearing 1 Shoulder"
+    ),
 
     "Bearing 1 Shoulder": Segment(
         "Bearing 1 Shoulder",
@@ -80,23 +87,29 @@ def main():
         link="Center Section"
     ),
 
-    "Output Spline Shoulder": Segment(
-        "Output Spline Shoulder",
-        97, 170, 462.5,
-        link="Bearing 1 Shoulder"
+    "Center Section": Segment(
+        "Center Section", 
+        176, 1254, 426.5),
+
+     "Gear Shoulder": Segment(
+        "Gear Shoulder",
+        176, 1254, 925,
+        link="Center Section"
     ),
 
     "Bearing 2 Shoulder": Segment(
         "Bearing 2 Shoulder",
         602, 300, -462.5,
-        link="Center Section"
+        link="Gear Shoulder"
     ),
 
     "Input Spline Shoulder": Segment(
         "Input Spline Shoulder",
         97, 170, -462.5,
         link="Bearing 2 Shoulder"
-    ),
+    )
+
+
     }
     
     target_fos_list = [2.0]   # <-- SET REQUIRED DESIGN FACTOR HERE
@@ -112,7 +125,7 @@ def main():
 
 
             # Iterte through r = .02 to r = .1
-            r = 0.06 
+            r = 0.05 #a secret * diameter that I added in #Step 2 — update stress concentrations
 
             segments = solve_shaft_iterative(
             segments,
