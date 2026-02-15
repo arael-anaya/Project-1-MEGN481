@@ -37,32 +37,6 @@ class Segment:
         self.Kt = StressConcentration.stress_concentration(D, d, r, "bending")
         self.Kts = StressConcentration.stress_concentration(D, d, r, "torsion")
 
-    def print_geometry(self, segments):
-        """
-        Print geometric ratios for this segment's shoulder transition.
-        Requires full segments dict to access linked segment.
-        """
-
-        if not self.link:
-            return
-
-        linked = segments[self.link]
-
-        D = max(self.d, linked.d)
-        d = min(self.d, linked.d)
-
-        r = self.r_ratio * d
-
-        d_over_D = d / D
-        r_over_d = r / d
-
-        print(f"{self.name} -> {self.link}")
-        print(f"  D = {D:.4f} in")
-        print(f"  d = {d:.4f} in")
-        print(f"  r = {r:.4f} in")
-        print(f"  d/D = {d_over_D:.4f}") 
-        print(f"  r/d = {r_over_d:.4f}\n")
-
         
 
 
@@ -240,8 +214,8 @@ def main():
     r_steps = 9
 
 
-    target_fos_list = [2.0]
-    materials = [Material("4140 Steel", Sy_psi=60200)]
+    target_fos_list = [2.0 ] #, 3.0]
+    materials = [Material("4140 Steel", Sy_psi=60200)] # , Material("ALUMINIUM" , Sy_psi=43000)]
     key_materials = [Material("FILL IN NAME", Sy_psi=41300)]
     fos_key_diff = 1.0
 
@@ -251,7 +225,7 @@ def main():
             Sy = material.Sy_psi
 
             segments = build_segments()
-            segments = optimize_radii(Sy, target_fos , r_min, r_max , r_steps, MAX_ITER)
+            # segments = optimize_radii(Sy, target_fos , r_min, r_max , r_steps, MAX_ITER)
 
             segments = solve_shaft_discrete(segments, Sy, target_fos, TOL, MAX_ITER)
 
@@ -328,11 +302,11 @@ def main():
                     r = seg.r_ratio * d_small
 
                     print(f"Fillet Radius (r):   {r:.4f} in")
-                    print(f"d/D:                 {(d_small / D):.4f}")
+                    print(f"d/D:                 {(D / d_small):.4f}")
                     print(f"r/D:                 {(r / D):.4f}")
                 else:
                     print(f"Fillet Radius:       N/A")
-                    print(f"d/D:                 N/A")
+                    print(f"D/d:                 N/A")
                     print(f"r/D:                 N/A")
 
             print("\n" + "="*100)
