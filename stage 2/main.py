@@ -117,7 +117,7 @@ def build_segments():
         ),
         "Center Section": Segment(
             "Center Section",
-            176, 1254, 426.5
+            176, 1254, 462.5
         ),
         "Gear Shoulder": Segment(
             "Gear Shoulder",
