@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 import numpy as np
 import copy
 
-MAX_ITER = 20
+MAX_ITER = 25
 TOL = 1e-7
 
 
@@ -117,7 +117,7 @@ def build_segments():
         ),
         "Center Section": Segment(
             "Center Section",
-            176, 1254, 426.5
+            176, 1254, 462.5
         ),
         "Gear Shoulder": Segment(
             "Gear Shoulder",
@@ -126,17 +126,17 @@ def build_segments():
         ),
         "Bearing 2 Shoulder": Segment(
             "Bearing 2 Shoulder",
-            602, 300, -462.5,
+            602, 300, 462.5,
             link="Gear Shoulder"
         ),
         "Input Spline Shoulder": Segment(
             "Input Spline Shoulder",
-            97, 170, -462.5,
+            97, 170, 462.5,
             link="Bearing 2 Shoulder"
         ),
         "Snap Ring" : Segment(
             "Snap Ring" ,
-            602,995,-462.5,
+            602,995,462.5,
             Kt = 3,
             Kts = 5 
             )
