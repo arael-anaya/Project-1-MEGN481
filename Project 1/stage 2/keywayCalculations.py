@@ -51,13 +51,13 @@ def key_von_mises(T, d, L, w, H):
 
     # --- Shear ---
     A_shear = L * w
-    tau = F / A_shear
+    tau = 3*(F / A_shear)
     sigma_vm_shear = np.sqrt(3) * tau
 
     # --- Bearing ---
     A_bearing = L * (H / 2)
     sigma_bearing = F / A_bearing
-    sigma_vm_bearing = sigma_bearing
+    sigma_vm_bearing = 2.3*sigma_bearing
 
     return max(sigma_vm_shear, sigma_vm_bearing)
 
